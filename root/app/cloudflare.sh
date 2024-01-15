@@ -38,30 +38,26 @@ getCustomIpAddress() {
 
 getPublicIpAddress() {
   if [ "$RRTYPE" == "A" ]; then
-    # Use DNS_SERVER ENV variable or default to 1.1.1.1
-    DNS_SERVER=${DNS_SERVER:=1.1.1.1}
+    # Use api.ipify.org
+    IPIFY=$(curl -sf4 https://api.ipify.org)
+    IP_ADDRESS=$([[ "$IPIFY" =~ ^[1-9][0-9]?[0-9]?\.[0-9][0-9]?[0-9]?\.[0-9][0-9]?[0-9]?\.[1-9][0-9]?[0-9]?$ ]] && echo "$IPIFY" || echo "")
 
-    # try dns method first.
-    CLOUD_FLARE_IP=$(dig +short @$DNS_SERVER ch txt whoami.cloudflare +time=3 | tr -d '"')
-    CLOUD_FLARE_IP_LEN=${#CLOUD_FLARE_IP}
-
-    # if using cloud flare fails, try opendns (some ISPs block 1.1.1.1)
-    IP_ADDRESS=$([ $CLOUD_FLARE_IP_LEN -gt 15 ] && echo $(dig +short myip.opendns.com @resolver1.opendns.com +time=3) || echo "$CLOUD_FLARE_IP")
-
-    # if dns method fails, use http method
+    # Use ipecho.net/plain
     if [ "$IP_ADDRESS" = "" ]; then
-      IP_ADDRESS=$(curl -sf4 https://ipinfo.io | jq -r '.ip')
+      IPECHO=$(curl -sf4 https://ipecho.net/plain)
+      IP_ADDRESS=$([[ "$IPECHO" =~ ^[1-9][0-9]?[0-9]?\.[0-9][0-9]?[0-9]?\.[0-9][0-9]?[0-9]?\.[1-9][0-9]?[0-9]?$ ]] && echo "$IPIFY" || echo "")
+    fi
+
+    # Use ipinfo.io
+    if [ "$IP_ADDRESS" = "" ]; then
+      IPINFO=$(curl -sf4 https://ipinfo.io | jq -r '.ip')
+      IP_ADDRESS=$([[ "$IPINFO" =~ ^[1-9][0-9]?[0-9]?\.[0-9][0-9]?[0-9]?\.[0-9][0-9]?[0-9]?\.[1-9][0-9]?[0-9]?$ ]] && echo "$IPIFY" || echo "")
     fi
 
     echo $IP_ADDRESS
   elif [ "$RRTYPE" == "AAAA" ]; then
-    # try dns method first.
-    IP_ADDRESS=$(dig +short @2606:4700:4700::1111 -6 ch txt whoami.cloudflare | tr -d '"')
-
     # if dns method fails, use http method
-    if [ "$IP_ADDRESS" = "" ]; then
-      IP_ADDRESS=$(curl -sf6 https://ifconfig.co)
-    fi
+    IP_ADDRESS=$(curl -sf6 https://ifconfig.co)
 
     echo $IP_ADDRESS
   fi
